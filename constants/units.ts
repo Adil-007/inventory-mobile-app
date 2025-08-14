@@ -1,0 +1,32 @@
+export const UNITS = [
+  { label: 'Pieces (pcs)', value: 'pcs' },
+  { label: 'Kilogram (kg)', value: 'kg' },
+  { label: 'Gram (g)', value: 'g' },
+  { label: 'Milligram (mg)', value: 'mg' },
+  { label: 'Metric Ton (ton)', value: 'ton' },
+
+  { label: 'Liter (L)', value: 'liter' },
+  { label: 'Milliliter (ml)', value: 'ml' },
+  { label: 'Gallon', value: 'gallon' },
+
+  { label: 'Meter (m)', value: 'meter' },
+  { label: 'Centimeter (cm)', value: 'cm' },
+  { label: 'Millimeter (mm)', value: 'mm' },
+  { label: 'Inch', value: 'inch' },
+  { label: 'Foot', value: 'foot' },
+  { label: 'Yard', value: 'yard' },
+
+  { label: 'Box', value: 'box' },
+  { label: 'Pack', value: 'pack' },
+  { label: 'Bottle', value: 'bottle' },
+  { label: 'Can', value: 'can' },
+  { label: 'Bag', value: 'bag' },
+  { label: 'Roll', value: 'roll' },
+  { label: 'Sheet', value: 'sheet' },
+  { label: 'Dozen', value: 'dozen' },
+  { label: 'Bundle', value: 'bundle' },
+  { label: 'Carton', value: 'carton' },
+  { label: 'Set', value: 'set' },
+  { label: 'Tube', value: 'tube' },
+  { label: 'Tray', value: 'tray' },
+];

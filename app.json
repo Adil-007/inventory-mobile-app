@@ -1,40 +1,44 @@
 {
   "expo": {
-    "name": "inventory-mobile-app",
-    "slug": "inventory-mobile-app",
+    "name": "Ease Stock",
+    "slug": "ease-stock",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "inventorymobileapp",
+    "icon": "./assets/images/EaseStockLogo.png",
+    "scheme": "easestock",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.easestock.app", 
+      "buildNumber": "1"
     },
+
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.easestock.app",
+      "versionCode": 1
     },
-    "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
-    },
+
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "image": "./assets/images/splash.png",
+          "resizeMode": "cover",
+          "backgroundColor": "#BA43CE"
         }
-      ]
+      ],
+      "expo-font",
+      "expo-secure-store"
     ],
+
     "experiments": {
       "typedRoutes": true
     }
