@@ -4,7 +4,6 @@
     "slug": "ease-stock",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/EaseStockLogo.png",
     "scheme": "easestock",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -27,14 +26,6 @@
 
     "plugins": [
       "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash.png",
-          "resizeMode": "cover",
-          "backgroundColor": "#BA43CE"
-        }
-      ],
       "expo-font",
       "expo-secure-store"
     ],
