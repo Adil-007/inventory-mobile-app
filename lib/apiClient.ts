@@ -5,7 +5,7 @@ import { store } from '../app/store/index';
 import { isOnline } from '../services/networkService'; // ✅ new import
 
 const apiClient = axios.create({
-  baseURL: 'http://172.20.10.3:5000/api',
+  baseURL: 'http://172.20.10.4:5000/api',
   withCredentials: true,
 });
 
@@ -111,7 +111,7 @@ apiClient.interceptors.response.use(
 
       try {
         const { data } = await axios.post<{ accessToken: string }>(
-          'http://172.20.10.3:5000/api/auth/refresh-token',
+          'http://172.20.10.4:5000/api/auth/refresh-token',
           {},
           { withCredentials: true }
         );
