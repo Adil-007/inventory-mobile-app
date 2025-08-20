@@ -1,37 +1,34 @@
 import axios, { AxiosResponse, InternalAxiosRequestConfig } from "axios";
-import Constants from "expo-constants"; // 👈 new import
+import Constants from "expo-constants";
 import { Alert } from "react-native";
 import { logout, setAccessToken } from "../app/store/authSlice";
 import { store } from "../app/store/index";
 import { isOnline } from "../services/networkService";
 
-// 👇 Get API base URL from app.config.js (extra.API_URL)
-const API_URL = Constants.expoConfig?.extra?.API_URL || "http://localhost:5000/api";
+// ✅ Get API base URL (supports both managed and bare workflows)
+const API_URL =
+  Constants.expoConfig?.extra?.API_URL ||
+  Constants.manifest?.extra?.API_URL ||
+  "https://inventory-production-217b.up.railway.app/api";
 
 const apiClient = axios.create({
-  baseURL: `${API_URL}/api`, // 👈 dynamic baseURL
+  baseURL: API_URL, // 👈 no need to add /api again
   withCredentials: true,
 });
 
-// =========================================
-// ===== Debounced Alert Helper ============
+// ===================================================
+// Alert Helper
 let isAlertShown = false;
-
 function showAlert(title: string, message: string) {
   if (isAlertShown) return;
   isAlertShown = true;
   Alert.alert(title, message, [
-    {
-      text: "OK",
-      onPress: () => {
-        isAlertShown = false;
-      },
-    },
+    { text: "OK", onPress: () => (isAlertShown = false) },
   ]);
 }
 
-// =========================================
-// ==== REFRESH TOKEN LOGIC ====
+// ===================================================
+// Refresh Token Logic
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
 
@@ -39,20 +36,17 @@ const onRefreshed = (token: string) => {
   refreshSubscribers.forEach((cb) => cb(token));
   refreshSubscribers = [];
 };
-
 const addSubscriber = (cb: (token: string) => void) => {
   refreshSubscribers.push(cb);
 };
 
-// ==== REQUEST INTERCEPTOR ====
+// ===================================================
+// Request Interceptor
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    // ✅ Check network before any request
     if (!isOnline()) {
       return Promise.reject({ isOffline: true, message: "No internet connection" });
     }
-
-    // ✅ Attach token
     const state = store.getState();
     const token = state.auth.accessToken;
     if (token) {
@@ -64,7 +58,8 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ==== RESPONSE INTERCEPTOR ====
+// ===================================================
+// Response Interceptor
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error) => {
@@ -72,12 +67,10 @@ apiClient.interceptors.response.use(
       showAlert("No Internet", "Please check your connection and try again.");
       return Promise.reject(error);
     }
-
     if (!error.response) {
-      showAlert("Network Error", "Unable to reach the server. Please check your connection or try again later.");
+      showAlert("Network Error", "Unable to reach the server. Please try again later.");
       return Promise.reject(error);
     }
-
     if (error.response.status >= 500) {
       showAlert("Server Error", "Something went wrong on our end. Please try again later.");
       return Promise.reject(error);
@@ -85,7 +78,7 @@ apiClient.interceptors.response.use(
 
     const originalRequest = error.config;
 
-    // ===== Refresh Token Logic =====
+    // ===== Refresh Token
     if (
       error.response?.status === 401 &&
       error.response?.data?.code === "ACCESS_EXPIRED" &&
@@ -105,7 +98,7 @@ apiClient.interceptors.response.use(
 
       try {
         const { data } = await axios.post<{ accessToken: string }>(
-          `${API_URL}/auth/refresh-token`, // 👈 now uses env URL
+          `${API_URL}/auth/refresh-token`,
           {},
           { withCredentials: true }
         );
@@ -116,8 +109,7 @@ apiClient.interceptors.response.use(
         originalRequest.headers["Authorization"] = `Bearer ${data.accessToken}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
-        const state = store.getState();
-        if (state.auth.accessToken) {
+        if (store.getState().auth.accessToken) {
           showAlert("Session Expired", "Your session has expired. Please log in again.");
         }
         store.dispatch(logout());
@@ -127,14 +119,14 @@ apiClient.interceptors.response.use(
       }
     }
 
+    // ===== Invalid/Expired Refresh
     if (
       error.response?.status === 401 &&
       ["REFRESH_EXPIRED", "REFRESH_INVALID", "ACCESS_INVALID", "NO_ACCESS_TOKEN"].includes(
         error.response?.data?.code
       )
     ) {
-      const state = store.getState();
-      if (state.auth.accessToken) {
+      if (store.getState().auth.accessToken) {
         showAlert("Session Expired", "Your session has expired. Please log in again.");
       }
       store.dispatch(logout());
