@@ -39,7 +39,7 @@ export default function WarehousesPage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const animation = useRef(new Animated.Value(0)).current;
   const [showEditModal, setShowEditModal] = useState<boolean>(false);

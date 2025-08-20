@@ -57,7 +57,7 @@ export default function TransfersPage() {
   const [filters, setFilters] = useState<Filters>({ source: '', destination: '' });
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
 
   const userRole = useSelector((state: RootState) => state.auth.user?.role);
 

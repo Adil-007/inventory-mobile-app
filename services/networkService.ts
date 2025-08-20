@@ -1,26 +1,33 @@
 import NetInfo from '@react-native-community/netinfo';
 
 /**
- * Checks if the device currently has an internet connection.
+ * Tracks whether the device currently has internet connectivity.
+ */
+let onlineStatus: boolean = true; // Assume online initially
+
+// Subscribe to network status updates on app start
+NetInfo.addEventListener((state) => {
+  // Force null → false
+  const isConnected = state.isConnected ?? false;
+  const isInternetReachable = state.isInternetReachable ?? false;
+
+  onlineStatus = isConnected && isInternetReachable;
+});
+
+/**
+ * Checks if the device currently has an internet connection (sync, cached).
  * @returns {boolean} True if online, false otherwise.
  */
 export function isOnline(): boolean {
-  // NetInfo.fetch() returns a Promise, so to use this sync in apiClient,
-  // you would need to cache the value or make this async.
-  // Here's an approach using a cached value updated via event subscription.
-
   return onlineStatus;
 }
 
-let onlineStatus = true; // Assume online initially
-
-// Subscribe to network status updates on app start
-NetInfo.addEventListener(state => {
-  onlineStatus = state.isConnected && state.isInternetReachable !== false;
-});
-
-// Optional: export a function that returns a Promise resolved with latest status (async)
+/**
+ * Async check for the latest status.
+ */
 export async function checkIsOnline(): Promise<boolean> {
   const state = await NetInfo.fetch();
-  return state.isConnected && state.isInternetReachable !== false;
+  const isConnected = state.isConnected ?? false;
+  const isInternetReachable = state.isInternetReachable ?? false;
+  return isConnected && isInternetReachable;
 }

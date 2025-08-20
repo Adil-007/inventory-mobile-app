@@ -1,17 +1,20 @@
-import axios, { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
-import { Alert } from 'react-native';
-import { logout, setAccessToken } from '../app/store/authSlice';
-import { store } from '../app/store/index';
-import { isOnline } from '../services/networkService'; // ✅ new import
+import axios, { AxiosResponse, InternalAxiosRequestConfig } from "axios";
+import Constants from "expo-constants"; // 👈 new import
+import { Alert } from "react-native";
+import { logout, setAccessToken } from "../app/store/authSlice";
+import { store } from "../app/store/index";
+import { isOnline } from "../services/networkService";
+
+// 👇 Get API base URL from app.config.js (extra.API_URL)
+const API_URL = Constants.expoConfig?.extra?.API_URL || "http://localhost:5000/api";
 
 const apiClient = axios.create({
-  baseURL: 'http://172.20.10.4:5000/api',
+  baseURL: `${API_URL}/api`, // 👈 dynamic baseURL
   withCredentials: true,
 });
 
 // =========================================
 // ===== Debounced Alert Helper ============
-
 let isAlertShown = false;
 
 function showAlert(title: string, message: string) {
@@ -19,7 +22,7 @@ function showAlert(title: string, message: string) {
   isAlertShown = true;
   Alert.alert(title, message, [
     {
-      text: 'OK',
+      text: "OK",
       onPress: () => {
         isAlertShown = false;
       },
@@ -29,7 +32,6 @@ function showAlert(title: string, message: string) {
 
 // =========================================
 // ==== REFRESH TOKEN LOGIC ====
-
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
 
@@ -47,7 +49,7 @@ apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     // ✅ Check network before any request
     if (!isOnline()) {
-      return Promise.reject({ isOffline: true, message: 'No internet connection' });
+      return Promise.reject({ isOffline: true, message: "No internet connection" });
     }
 
     // ✅ Attach token
@@ -55,7 +57,7 @@ apiClient.interceptors.request.use(
     const token = state.auth.accessToken;
     if (token) {
       config.headers = config.headers ?? {};
-      config.headers['Authorization'] = `Bearer ${token}`;
+      config.headers["Authorization"] = `Bearer ${token}`;
     }
     return config;
   },
@@ -66,41 +68,33 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error) => {
-    // ✅ Offline request blocked
     if (error.isOffline) {
-      showAlert('No Internet', 'Please check your connection and try again.');
+      showAlert("No Internet", "Please check your connection and try again.");
       return Promise.reject(error);
     }
 
-    // ✅ Global network/server error handling
     if (!error.response) {
-      showAlert(
-        'Network Error',
-        'Unable to reach the server. Please check your connection or try again later.'
-      );
+      showAlert("Network Error", "Unable to reach the server. Please check your connection or try again later.");
       return Promise.reject(error);
     }
 
     if (error.response.status >= 500) {
-      showAlert(
-        'Server Error',
-        'Something went wrong on our end. Please try again later.'
-      );
+      showAlert("Server Error", "Something went wrong on our end. Please try again later.");
       return Promise.reject(error);
     }
 
     const originalRequest = error.config;
 
-    // ===== Refresh Token Logic (unchanged) =====
+    // ===== Refresh Token Logic =====
     if (
       error.response?.status === 401 &&
-      error.response?.data?.code === 'ACCESS_EXPIRED' &&
+      error.response?.data?.code === "ACCESS_EXPIRED" &&
       !originalRequest._retry
     ) {
       if (isRefreshing) {
         return new Promise((resolve) => {
           addSubscriber((token: string) => {
-            originalRequest.headers['Authorization'] = `Bearer ${token}`;
+            originalRequest.headers["Authorization"] = `Bearer ${token}`;
             resolve(apiClient(originalRequest));
           });
         });
@@ -111,7 +105,7 @@ apiClient.interceptors.response.use(
 
       try {
         const { data } = await axios.post<{ accessToken: string }>(
-          'http://172.20.10.4:5000/api/auth/refresh-token',
+          `${API_URL}/auth/refresh-token`, // 👈 now uses env URL
           {},
           { withCredentials: true }
         );
@@ -119,12 +113,12 @@ apiClient.interceptors.response.use(
         store.dispatch(setAccessToken(data.accessToken));
         onRefreshed(data.accessToken);
 
-        originalRequest.headers['Authorization'] = `Bearer ${data.accessToken}`;
+        originalRequest.headers["Authorization"] = `Bearer ${data.accessToken}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
         const state = store.getState();
         if (state.auth.accessToken) {
-          showAlert('Session Expired', 'Your session has expired. Please log in again.');
+          showAlert("Session Expired", "Your session has expired. Please log in again.");
         }
         store.dispatch(logout());
         return Promise.reject(refreshError);
@@ -133,16 +127,15 @@ apiClient.interceptors.response.use(
       }
     }
 
-    // Refresh token expired or invalid
     if (
       error.response?.status === 401 &&
-      ['REFRESH_EXPIRED', 'REFRESH_INVALID', 'ACCESS_INVALID', 'NO_ACCESS_TOKEN'].includes(
+      ["REFRESH_EXPIRED", "REFRESH_INVALID", "ACCESS_INVALID", "NO_ACCESS_TOKEN"].includes(
         error.response?.data?.code
       )
     ) {
       const state = store.getState();
       if (state.auth.accessToken) {
-        showAlert('Session Expired', 'Your session has expired. Please log in again.');
+        showAlert("Session Expired", "Your session has expired. Please log in again.");
       }
       store.dispatch(logout());
     }

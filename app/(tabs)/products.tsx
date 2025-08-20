@@ -42,7 +42,7 @@ type Product = {
   };
   image?: string;
   buyingPrice?: number;
-  sellingPrice?: string;
+  sellingPrice?: number;
   createdAt?: string;
 };
 

@@ -74,11 +74,6 @@ export default function HomeScreen() {
   const isFetchingSummaryRef = useRef(false);
   const isFetchingActivityRef = useRef(false);
 
-  useEffect(() => {
-    if (!token) return; // Stop if not logged in yet
-    fetchSummaryData();
-    fetchRecentActivity();
-  }, [token, isConnected]);
 
   // Language toggle function
   const toggleLanguage = () => {
@@ -144,6 +139,12 @@ export default function HomeScreen() {
       isFetchingActivityRef.current = false;
     }
   }, [t, isConnected, offlineErrorShown]);
+
+    useEffect(() => {
+    if (!token) return; // Stop if not logged in yet
+    fetchSummaryData();
+    fetchRecentActivity();
+  }, [token, isConnected, fetchRecentActivity, fetchSummaryData]);
 
   const onRefresh = async () => {
     try {
