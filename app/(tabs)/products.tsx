@@ -72,6 +72,8 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function ProductsPage() {
   const { isConnected } = useNetworkStatus();
+  const flatListRef = useRef<FlatList<Product>>(null); // ✅ ref for scroll-to-top
+  const [pendingSearch, setPendingSearch] = useState(''); // ✅ hold input text until search pressed
   const [products, setProducts] = useState<Product[]>([]);
   const [pagination, setPagination] = useState<Pagination>({
     page: 1,
@@ -229,6 +231,11 @@ export default function ProductsPage() {
     await fetchProducts(1);
   };
 
+  const handleSearch = () => {
+    setSearchQuery(pendingSearch);
+    setPagination((p) => ({ ...p, page: 1 })); // reset to page 1
+  };
+
   // Apply filters from the modal
   const applyFilters = () => {
     setFilters(pendingFilters);
@@ -285,18 +292,23 @@ export default function ProductsPage() {
           <TextInput
             style={styles.searchInput}
             placeholder={t('products.searchPlaceholder')}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
+            value={pendingSearch}
+            onChangeText={setPendingSearch}
             placeholderTextColor="#94a3b8"
             autoCorrect={false}
             autoCapitalize="none"
-            clearButtonMode="while-editing"
+            onSubmitEditing={handleSearch} // also search on Enter
           />
-        {searchQuery ? (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Feather name="x" size={18} color="#94a3b8" />
+          {pendingSearch ? (
+            <TouchableOpacity onPress={() => setPendingSearch('')}>
+              <Feather name="x" size={18} color="#94a3b8" />
+            </TouchableOpacity>
+          ) : null}
+
+          {/* ✅ Search Button */}
+          <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+            <Text style={styles.searchButtonText}>{t('products.search')}</Text>
           </TouchableOpacity>
-        ) : null}
         </View>
 
         {(filters.category || filters.warehouse || filters.stockStatus || (sortOption && sortOption.id !== SORT_OPTIONS[0].id)) && (
@@ -395,7 +407,7 @@ export default function ProductsPage() {
                 </TouchableOpacity>
                 <View style={styles.info}>
                   <View style={styles.infoHeader}>
-                    <Text style={styles.name} numberOfLines={1}>
+                    <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
                       {item.name}
                     </Text>
                     <View style={styles.stockIndicator}>
@@ -493,10 +505,13 @@ export default function ProductsPage() {
               </View>
             )}
           />
-          <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginVertical: 12 }}>
+          <View style={styles.paginationRow}>
             <TouchableOpacity
               style={[styles.paginationButton, pagination.page <= 1 && styles.disabledButton]}
-              onPress={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
+              onPress={() => {
+                setPagination((p) => ({ ...p, page: p.page - 1 }));
+                flatListRef.current?.scrollToOffset({ offset: 0, animated: true }); // ✅ scroll to top
+              }}
               disabled={pagination.page <= 1}
             >
               <Text style={styles.paginationButtonText}>{t('previous')}</Text>
@@ -508,12 +523,16 @@ export default function ProductsPage() {
 
             <TouchableOpacity
               style={[styles.paginationButton, pagination.page >= pagination.totalPages && styles.disabledButton]}
-              onPress={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
+              onPress={() => {
+                setPagination((p) => ({ ...p, page: p.page + 1 }));
+                flatListRef.current?.scrollToOffset({ offset: 0, animated: true }); // ✅ scroll to top
+              }}
               disabled={pagination.page >= pagination.totalPages}
             >
               <Text style={styles.paginationButtonText}>{t('next')}</Text>
             </TouchableOpacity>
           </View>
+
 
           {(userRole === 'admin' || userRole === 'superadmin') && (
             <TouchableOpacity
@@ -761,6 +780,23 @@ paginationButtonText: {
   safeArea: {
     flex: 1,
     backgroundColor: '#f8fafc',
+  },
+    searchButton: {
+    marginLeft: 8,
+    backgroundColor: '#6366f1',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  searchButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  paginationRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 12,
   },
   container: {
     flex: 1,
