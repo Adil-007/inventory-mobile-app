@@ -72,8 +72,8 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function ProductsPage() {
   const { isConnected } = useNetworkStatus();
-  const flatListRef = useRef<FlatList<Product>>(null); // ✅ ref for scroll-to-top
-  const [pendingSearch, setPendingSearch] = useState(''); // ✅ hold input text until search pressed
+  const flatListRef = useRef<FlatList<Product>>(null);
+  const [pendingSearch, setPendingSearch] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [pagination, setPagination] = useState<Pagination>({
     page: 1,
@@ -129,7 +129,7 @@ export default function ProductsPage() {
     }
   }, [SORT_OPTIONS, sortOption]);
 
-  // Offline Alert: Debounced, once per offline event
+  // Offline Alert
   useEffect(() => {
     if (!isConnected && !offlineErrorShown) {
       setOfflineErrorShown(true);
@@ -159,7 +159,7 @@ export default function ProductsPage() {
     }
   }, [isConnected]);
 
-  // Debounce searchQuery, filters, sortOption; on any change reset page to 1 and update params
+  // Debounce searchQuery and filters changes to reduce fetch calls
   const [debouncedParams, setDebouncedParams] = useState({
     searchQuery,
     filters,
@@ -169,13 +169,13 @@ export default function ProductsPage() {
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedParams({ searchQuery, filters, sortOption });
-      // Reset pagination to page 1 when params change
+      // Reset pagination to page 1 when filters or search change
       setPagination((p) => ({ ...p, page: 1 }));
     }, 700);
     return () => clearTimeout(handler);
   }, [searchQuery, filters, sortOption]);
 
-  // Fetch products with given page (default 1)
+  // Stable fetchProducts - FOLLOWING SALES PAGE PATTERN
   const fetchProducts = useCallback(
     async (page = 1, limit = 50) => {
       if (!isConnected) {
@@ -187,43 +187,48 @@ export default function ProductsPage() {
       isFetchingProductsRef.current = true;
 
       try {
-        if (page === 1 && !refreshing) setLoading(true);
-        if (refreshing) setRefreshing(true);
+        setLoading(true);
+        setError(null);
 
-        const { products: newProducts, total, totalPages } = await productService.getAllProducts({
-          page,
-          limit,
-          search: debouncedParams.searchQuery,
-          warehouse: debouncedParams.filters.warehouse,
-          category: debouncedParams.filters.category,
-          stockStatus: debouncedParams.filters.stockStatus as 'in' | 'low' | 'out',
-          sortField: validSortFields.includes(debouncedParams.sortOption?.value as any)
-            ? (debouncedParams.sortOption?.value as 'name' | 'quantity' | 'createdAt')
-            : 'createdAt',
-          sortOrder: debouncedParams.sortOption?.order ?? 'desc',
-        });
+        const { products: newProducts, total, totalPages } =
+          await productService.getAllProducts({
+            page,
+            limit,
+            search: debouncedParams.searchQuery,
+            warehouse: debouncedParams.filters.warehouse,
+            category: debouncedParams.filters.category,
+            stockStatus: debouncedParams.filters.stockStatus as 'in' | 'low' | 'out',
+            sortField: validSortFields.includes(debouncedParams.sortOption?.value as any)
+              ? (debouncedParams.sortOption?.value as 'name' | 'quantity' | 'createdAt')
+              : 'createdAt',
+            sortOrder: debouncedParams.sortOption?.order ?? 'desc',
+          });
 
         setProducts(newProducts);
         setPagination({ page, limit, total, totalPages });
-        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
         setLoading(false);
         setRefreshing(false);
         isFetchingProductsRef.current = false;
       }
     },
-    [debouncedParams, isConnected, refreshing]
+    [debouncedParams, isConnected] // Remove refreshing from dependencies
   );
 
-  // Initial data fetch on mount
+  // ✅ FIXED: Use the same pattern as sales page
+  // Fetch products on screen focus
   useEffect(() => {
     fetchInitialData();
-  }, [fetchInitialData]);
+    fetchProducts(1);
+  }, [fetchInitialData, fetchProducts]);
 
-  // Fetch products when debouncedParams or pagination.page changes
+  // Refetch when page changes
   useEffect(() => {
-    fetchProducts(pagination.page);
-  }, [debouncedParams, pagination.page, fetchProducts]);
+      fetchProducts(pagination.page);
+  }, [pagination.page, fetchProducts]);
+
 
   // Pull-to-refresh handler
   const onRefresh = async () => {
@@ -233,23 +238,19 @@ export default function ProductsPage() {
 
   const handleSearch = () => {
     setSearchQuery(pendingSearch);
-    setPagination((p) => ({ ...p, page: 1 })); // reset to page 1
   };
 
-  // Apply filters from the modal
   const applyFilters = () => {
     setFilters(pendingFilters);
     setShowFilters(false);
   };
 
-  // Clear filters and reset sorting, search, pagination
   const clearFilters = () => {
     setFilters({ category: '', warehouse: '', stockStatus: '' });
     setPendingFilters({ category: '', warehouse: '', stockStatus: '' });
     setSearchQuery('');
+    setPendingSearch('');
     setSortOption(SORT_OPTIONS[0]);
-    setPagination((prev) => ({ ...prev, page: 1 }));
-    fetchProducts(1);
     setShowFilters(false);
   };
 
@@ -257,6 +258,7 @@ export default function ProductsPage() {
     if (!uri) return require('../../assets/images/placeholder-image.png');
     return { uri };
   };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       {isConnected === false && (
@@ -267,6 +269,7 @@ export default function ProductsPage() {
       {loading ? (
         <ActivityIndicator size="large" style={{ marginTop: 20 }} />
       ) : (
+      
       <View style={styles.container}>
         <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginVertical: 8 }}>
           <Feather name="chevron-down" size={16} color="#94a3b8" />
@@ -300,14 +303,20 @@ export default function ProductsPage() {
             onSubmitEditing={handleSearch} // also search on Enter
           />
           {pendingSearch ? (
-            <TouchableOpacity onPress={() => setPendingSearch('')}>
+            <TouchableOpacity
+              onPress={() => {
+                setPendingSearch('');
+                setSearchQuery('');       // ✅ reset the active search
+                setPagination((p) => ({ ...p, page: 1 })); // ✅ go back to page 1
+              }}
+            >
               <Feather name="x" size={18} color="#94a3b8" />
             </TouchableOpacity>
           ) : null}
 
           {/* ✅ Search Button */}
           <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-            <Text style={styles.searchButtonText}>{t('products.search')}</Text>
+            <Text style={styles.searchButtonText}>{t('common.search')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -616,7 +625,7 @@ export default function ProductsPage() {
                     key={warehouse._id}
                     style={[
                       styles.filterOption,
-                      filters.warehouse === warehouse._id && styles.selectedFilterOption,
+                      pendingFilters.warehouse === warehouse._id && styles.selectedFilterOption,
                     ]}
                     onPress={() =>
                       setPendingFilters(prev => ({
@@ -675,7 +684,7 @@ export default function ProductsPage() {
                   <TouchableOpacity
                     style={[
                       styles.filterOption,
-                      filters.stockStatus === 'out' && styles.selectedFilterOption,
+                      pendingFilters.stockStatus === 'out' && styles.selectedFilterOption,
                     ]}
                     onPress={() => setPendingFilters((prev) => ({ ...prev, stockStatus: prev.stockStatus === 'out' ? '' : 'out',}))}
                   >

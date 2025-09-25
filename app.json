@@ -2,7 +2,7 @@
   "expo": {
     "name": "Ease Stock",
     "slug": "ease-stock",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "scheme": "easestock",
     "userInterfaceStyle": "automatic",
@@ -10,8 +10,8 @@
 
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.easestock.app", 
-      "buildNumber": "1"
+      "bundleIdentifier": "com.easestock.app",
+      "buildNumber": "2"
     },
 
     "android": {

@@ -6,11 +6,10 @@ import { Feather } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState, } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../app/store';
-
 
 import {
   ActivityIndicator,
@@ -29,7 +28,6 @@ import {
 import { Dropdown } from 'react-native-element-dropdown';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Interfaces for typed data
 interface Warehouse {
   _id: string;
   name: string;
@@ -49,8 +47,7 @@ export default function AddSaleScreen() {
   const { t } = useTranslation();
   const userId = useSelector((state: RootState) => state.auth.user?._id);
 
-
-  // State hooks
+  // --- state hooks ---
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
   const [products, setProducts] = useState<Product[]>([]);
@@ -67,17 +64,32 @@ export default function AddSaleScreen() {
   const [amountPaid, setAmountPaid] = useState<string>('0');
   const [date, setDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
-  const [paymentMethod, setPaymentMethod] = useState<string>('cash'); // 'cash' or 'credit' terms
+  const [paymentMethod, setPaymentMethod] = useState<string>('cash');
   const [creditTerm, setCreditTerm] = useState<string>('30');
   const [loading, setLoading] = useState<boolean>(false);
   const [productLoading, setProductLoading] = useState<boolean>(false);
-  const [paymentChannel, setPaymentChannel] = useState<string>('cash'); // payment 'channel', e.g. cash or bank
+  const [paymentChannel, setPaymentChannel] = useState<string>('cash');
 
-
-  // Use a ref with proper typing for debounce timer
   const debounceTimer = useRef<number | null>(null);
 
-  /** Fetch warehouses on mount */
+  // --- reset form helper ---
+  const resetForm = (): void => {
+    setCustomer('');
+    setSelectedWarehouse('');
+    setProducts([]);
+    setFilteredProducts([]);
+    setSelectedProduct(null);
+    setProductId('');
+    setUnitPrice('');
+    setQuantity('');
+    setAmountPaid('0');
+    setDate(new Date());
+    setPaymentMethod('cash');
+    setPaymentChannel('cash');
+    setCreditTerm('30');
+  };
+
+  // --- fetch warehouses ---
   const fetchWarehouses = useCallback(async (): Promise<void> => {
     try {
       const data = await warehouseService.getAllWarehouses();
@@ -86,20 +98,16 @@ export default function AddSaleScreen() {
       } else {
         setWarehouses([]);
       }
-    } catch {
-    }
+    } catch {}
   }, []);
 
   useEffect(() => {
     fetchWarehouses();
   }, [fetchWarehouses]);
 
-  /**
-   * Fetch products filtered by warehouse with race condition prevention
-   */
+  // --- load products when warehouse changes ---
   useEffect(() => {
     let isCancelled = false;
-
     const loadProducts = async () => {
       if (!selectedWarehouse) {
         if (!isCancelled) {
@@ -113,16 +121,12 @@ export default function AddSaleScreen() {
         return;
       }
       if (!isCancelled) setProductLoading(true);
-
       try {
+        const data = await productService.getProductList(selectedWarehouse);
+        const productArray = Array.isArray(data) ? data : [];
         if (!isCancelled) {
-          const data = await productService.getProductList(selectedWarehouse);
-
-          const productArray = Array.isArray(data) ? data : [];
           setProducts(productArray);
           setFilteredProducts(productArray);
-
-          // Reset product selection when warehouse changes
           setSelectedProduct(null);
           setProductId('');
           setUnitPrice('');
@@ -136,15 +140,13 @@ export default function AddSaleScreen() {
         if (!isCancelled) setProductLoading(false);
       }
     };
-
     loadProducts();
-
     return () => {
       isCancelled = true;
     };
   }, [selectedWarehouse, t]);
 
-  /** Debounce product search */
+  // --- debounce search ---
   useEffect(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
@@ -155,36 +157,32 @@ export default function AddSaleScreen() {
     };
   }, [productSearch]);
 
-  /** Filter products by search */
   useEffect(() => {
     if (debouncedSearch) {
       const lowered = debouncedSearch.toLowerCase();
-      const filtered = products.filter((p: Product) =>
-        p.name.toLowerCase().includes(lowered) ||
-        (p.brand?.toLowerCase().includes(lowered) ?? false)
+      setFilteredProducts(
+        products.filter(
+          p =>
+            p.name.toLowerCase().includes(lowered) ||
+            (p.brand?.toLowerCase().includes(lowered) ?? false),
+        ),
       );
-      setFilteredProducts(filtered);
     } else {
       setFilteredProducts(products);
     }
   }, [debouncedSearch, products]);
 
-  /** Handle product selection with validation of warehouse association */
   const handleProductSelect = (p: Product): void => {
     if (!selectedWarehouse) {
       Alert.alert(t('sale.errortitle'), t('sale.selectwarehousefirst'));
       return;
     }
-    // Validate product belongs to selected warehouse if warehouse property exists
     const productWarehouseId =
-      typeof p.warehouse === 'string' ? p.warehouse :
-      p.warehouse?._id;
-
+      typeof p.warehouse === 'string' ? p.warehouse : p.warehouse?._id;
     if (productWarehouseId && productWarehouseId !== selectedWarehouse) {
       Alert.alert(t('sale.errortitle'), t('sale.productnotinwarehouse'));
       return;
     }
-
     setSelectedProduct(p);
     setProductId(p._id);
     setUnitPrice(p.price !== undefined && p.price !== null ? p.price.toString() : '');
@@ -193,7 +191,6 @@ export default function AddSaleScreen() {
     setProductSearch('');
   };
 
-  /** Calculate total price */
   const calculatePrice = (): number => {
     const qty = parseFloat(quantity);
     const price = parseFloat(unitPrice);
@@ -201,115 +198,84 @@ export default function AddSaleScreen() {
     return qty * price;
   };
 
-const validateInputs = (): boolean => {
-  if (!selectedWarehouse) {
-    Alert.alert(t('sale.errortitle'), t('sale.selectwarehouse'));
-    return false;
-  }
-  if (!customer.trim()) {
-    Alert.alert(t('sale.errortitle'), t('sale.fillcustomername'));
-    return false;
-  }
-  if (!productId) {
-    Alert.alert(t('sale.errortitle'), t('sale.selectproduct'));
-    return false;
-  }
-  const qty = parseFloat(quantity);
-  if (isNaN(qty) || qty <= 0) {
-    Alert.alert(t('sale.errortitle'), t('sale.invalidquantity'));
-    return false;
-  }
-  // New: check quantity does not exceed stock
-  if (selectedProduct && qty > (selectedProduct.quantity ?? 0)) {
-    Alert.alert(
-      t('sale.errortitle'),
-      t('sale.quantityExceedsStock', { available: selectedProduct.quantity }),
-    );
-    return false;
-  }
-
-  const price = parseFloat(unitPrice);
-  if (isNaN(price) || price <= 0) {
-    Alert.alert(t('sale.errortitle'), t('sale.invalidunitprice'));
-    return false;
-  }
-  if (!(date instanceof Date) || isNaN(date.getTime())) {
-    Alert.alert(t('sale.errortitle'), t('sale.invaliddate'));
-    return false;
-  }
-  if (!paymentMethod) {
-    Alert.alert(t('sale.errortitle'), t('sale.selectpaymentmethod'));
-    return false;
-  }
-  if (paymentMethod === 'credit') {
-    const term = parseInt(creditTerm, 10);
-    if (isNaN(term) || term <= 0) {
-      Alert.alert(t('sale.errortitle'), t('sale.invalidcreditterm'));
+  const validateInputs = (): boolean => {
+    if (!selectedWarehouse) {
+      Alert.alert(t('sale.errortitle'), t('sale.selectwarehouse'));
       return false;
     }
-  }
-  const paid = parseFloat(amountPaid) || 0;
-  const totalPrice = calculatePrice();
-  if (paid < 0) {
-    Alert.alert(t('sale.errortitle'), t('sale.invalidamountpaid'));
-    return false;
-  }
-  if (paid > totalPrice) {
-    Alert.alert(t('sale.errortitle'), t('sale.amountpaidexceedstotal'));
-    return false;
-  }
-  return true;
-};
+    if (!customer.trim()) {
+      Alert.alert(t('sale.errortitle'), t('sale.fillcustomername'));
+      return false;
+    }
+    if (!productId) {
+      Alert.alert(t('sale.errortitle'), t('sale.selectproduct'));
+      return false;
+    }
+    const qty = parseFloat(quantity);
+    if (isNaN(qty) || qty <= 0) {
+      Alert.alert(t('sale.errortitle'), t('sale.invalidquantity'));
+      return false;
+    }
+    if (selectedProduct && qty > (selectedProduct.quantity ?? 0)) {
+      Alert.alert(t('sale.errortitle'), t('sale.quantityExceedsStock', { available: selectedProduct.quantity }));
+      return false;
+    }
+    const price = parseFloat(unitPrice);
+    if (isNaN(price) || price <= 0) {
+      Alert.alert(t('sale.errortitle'), t('sale.invalidunitprice'));
+      return false;
+    }
+    return true;
+  };
 
-
-  /** Save sale */
+  // --- save sale & go back ---
   const handleSave = async (): Promise<void> => {
     if (!validateInputs()) return;
-
     try {
       setLoading(true);
-      if (!userId) {
-        Alert.alert(t('sale.errortitle'), t('sale.usernotloggedin'));
-        return;
-      }
-
-      const totalPrice = calculatePrice();
-
-      // Backend to calculate amountDue & paymentStatus
       const payload = {
         customerName: customer.trim(),
         salesPerson: userId,
         product: productId,
         quantity: parseFloat(quantity),
-        price: totalPrice,
+        price: calculatePrice(),
         amountPaid: amountPaid.trim() === "" ? 0 : parseFloat(amountPaid),
         paymentMethod,
         paymentChannel,
         date: date.toISOString(),
         creditTerm: paymentMethod === 'credit' ? parseInt(creditTerm, 10) : undefined,
       };
-
       await saleService.addSale(payload);
-
       Alert.alert(t('sale.successtitle'), t('sale.successmessage'));
-
-      // Reset form after success OR navigate back
-      // For safety, resetting form here before navigation:
-      setCustomer('');
-      setSelectedWarehouse('');
-      setProducts([]);
-      setFilteredProducts([]);
-      setSelectedProduct(null);
-      setProductId('');
-      setUnitPrice('');
-      setQuantity('');
-      setAmountPaid('0');
-      setDate(new Date());
-      setPaymentMethod('cash');
-      setPaymentChannel('cash');
-      setCreditTerm('30');
-
+      resetForm();
       router.replace('/sales');
+    } catch {
+      Alert.alert(t('sale.errortitle') || t('sale.genericerror'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- save sale & create new ---
+  const handleSaveAndNew = async (): Promise<void> => {
+    if (!validateInputs()) return;
+    try {
+      setLoading(true);
+      const payload = {
+        customerName: customer.trim(),
+        salesPerson: userId,
+        product: productId,
+        quantity: parseFloat(quantity),
+        price: calculatePrice(),
+        amountPaid: amountPaid.trim() === "" ? 0 : parseFloat(amountPaid),
+        paymentMethod,
+        paymentChannel,
+        date: date.toISOString(),
+        creditTerm: paymentMethod === 'credit' ? parseInt(creditTerm, 10) : undefined,
+      };
+      await saleService.addSale(payload);
+      Alert.alert(t('sale.successtitle'), t('sale.successmessage'));
+      resetForm(); // stay on page
     } catch {
       Alert.alert(t('sale.errortitle') || t('sale.genericerror'));
     } finally {
@@ -321,6 +287,7 @@ const validateInputs = (): boolean => {
     label: w.name,
     value: w._id,
   }));
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -550,28 +517,39 @@ const validateInputs = (): boolean => {
         </View>
 
         {/* Save Button */}
-        <TouchableOpacity
-          style={[styles.saveButton, loading && { opacity: 0.7 }]}
-          onPress={handleSave}
-          disabled={loading}
-          activeOpacity={0.9}
-        >
-          <LinearGradient
-            colors={['#6d28d9', '#8b5cf6']}
-            style={styles.gradientButton}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 }}>
+          {/* Save & Go Back */}
+          <TouchableOpacity
+            style={[styles.saveButton, { flex: 1, marginRight: 8 }, loading && { opacity: 0.7 }]}
+            onPress={handleSave}
+            disabled={loading}
+            activeOpacity={0.9}
           >
-            {loading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <LinearGradient colors={['#6d28d9', '#8b5cf6']} style={styles.gradientButton}>
+              {loading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
                 <Text style={styles.saveButtonText}>{t('sale.recordsale')}</Text>
-                <Feather name="check-circle" size={22} color="#fff" />
-              </View>
-            )}
-          </LinearGradient>
-        </TouchableOpacity>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Save & Create New */}
+          <TouchableOpacity
+            style={[styles.saveButton, { flex: 1, marginLeft: 8 }, loading && { opacity: 0.7 }]}
+            onPress={handleSaveAndNew}
+            disabled={loading}
+            activeOpacity={0.9}
+          >
+            <LinearGradient colors={['#059669', '#10b981']} style={styles.gradientButton}>
+              {loading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.saveButtonText}>{t('sale.recordsaleandnew')}</Text>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       {/* Product Selection Modal */}

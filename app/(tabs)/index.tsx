@@ -7,6 +7,7 @@ import {
   Alert,
   Keyboard,
   KeyboardAvoidingView,
+  Linking, // NEW
   Platform,
   RefreshControl,
   ScrollView,
@@ -19,12 +20,14 @@ import {
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../app/store';
+import useNetworkStatus from '../../hooks/useNetworkStatus';
 import i18n from '../../i18n';
 import dashboardService from '../../services/dashboardService';
 import AddCategoryModal from '../categories/add';
 import AddWarehouseModal from '../warehouses/add';
 
-import useNetworkStatus from '../../hooks/useNetworkStatus'; // your network hook
+// NEW
+import VersionCheck from 'react-native-version-check';
 
 const iconMap = {
   product: { name: 'check-circle', color: '#4CAF50', bg: '#e6f7ee' },
@@ -63,16 +66,54 @@ export default function HomeScreen() {
   });
   const [refreshing, setRefreshing] = useState(false);
 
-  // Error states for inline error display
   const [, setSummaryError] = useState<string | null>(null);
   const [, setActivityError] = useState<string | null>(null);
-
-  // Offline alert shown once per offline event
   const [offlineErrorShown, setOfflineErrorShown] = useState(false);
 
-  // Concurrency refs
   const isFetchingSummaryRef = useRef(false);
   const isFetchingActivityRef = useRef(false);
+
+  // 🔹 Force Update Check
+  useEffect(() => {
+    const checkForUpdate = async () => {
+      try {
+        const latestVersion = await VersionCheck.getLatestVersion({
+          provider: 'appStore',
+          appID: '6751286477' // replace with your App Store numeric ID
+        });
+
+        const currentVersion = VersionCheck.getCurrentVersion();
+
+        const updateNeeded = VersionCheck.needUpdate({
+          currentVersion,
+          latestVersion,
+        });
+
+        if (updateNeeded.isNeeded) {
+          Alert.alert(
+            'Update Required',
+            `A new version (v${latestVersion}) is available. Please update to continue.`,
+            [
+              {
+                text: 'Update Now',
+                onPress: async () => {
+                  const url = await VersionCheck.getAppStoreUrl({
+                    appID: '6751286477'
+                  });
+                  Linking.openURL(url);
+                },
+              },
+            ],
+            { cancelable: false }
+          );
+        }
+      } catch (err) {
+        console.log('Version check failed:', err);
+      }
+    };
+
+    checkForUpdate();
+  }, []);
 
 
   // Language toggle function

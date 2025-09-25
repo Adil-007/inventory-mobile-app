@@ -29,6 +29,7 @@ type ParsedItem = {
 type ImportResult = {
   addedCount: number;
   errorCount: number;
+  rejectedItems?: ParsedItem[];
 } | null;
 
 const ImportProductsScreen = () => {
@@ -126,16 +127,25 @@ const ImportProductsScreen = () => {
       setIsLoading(true);
       const result = await importService.uploadImportFile(selectedFile);
       setImportResult(result);
-      Alert.alert(
-        t('importProducts.importComplete'),
-        `${result.addedCount} ${t('importProducts.importSuccess')}\n${result.errorCount} ${t('importProducts.importErrors')}`
-      );
+
+      if (result.errorCount > 0) {
+        Alert.alert(
+          t('importProducts.importComplete'),
+          `${result.addedCount} ${t('importProducts.importSuccess')}\n${result.errorCount} ${t('importProducts.importErrors')}\n\n${t('importProducts.followTemplate')}`
+        );
+      } else {
+        Alert.alert(
+          t('importProducts.importComplete'),
+          `${result.addedCount} ${t('importProducts.importSuccess')}`
+        );
+      }
     } catch (err: any) {
       Alert.alert(t('importProducts.importFailed'), err?.response?.data?.message || err.message);
     } finally {
       setIsLoading(false);
     }
   };
+
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -249,6 +259,31 @@ const ImportProductsScreen = () => {
           )}
         </View>
       )}
+      
+      {importResult?.rejectedItems && importResult.rejectedItems.length > 0 && (
+        <View style={styles.previewContainer}>
+          <View style={styles.sectionHeader}>
+            <MaterialIcons name="error-outline" size={18} color="#b91c1c" />
+            <Text style={styles.sectionTitle}>{t('importProducts.rejectedItems')}</Text>
+          </View>
+          <ScrollView style={styles.previewScroll}>
+            {importResult.rejectedItems.map((item, idx) => (
+              <View key={idx} style={[styles.itemCard, { borderColor: '#b91c1c' }]}>
+                <Text style={styles.itemName}>❌ {item.name}</Text>
+                <Text style={styles.itemDetails}>
+                  {item.quantity} {item.unit} • {item.category} • {item.warehouse}
+                </Text>
+                {item.brand && (
+                  <Text style={styles.itemBrand}>
+                    <MaterialIcons name="branding-watermark" size={12} color="#6b7280" /> {item.brand}
+                  </Text>
+                )}
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
 
       {/* Validation Errors */}
       {validationErrors.length > 0 && (

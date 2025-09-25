@@ -22,6 +22,7 @@
   },
     "more": {
     "title": "ተጨማሪ",
+    "salesDetailReport": "የሽያጭ ዝርዝር ዘገባ",
     "subtitle": "ተጨማሪ የእቃ አስተዳደር መቆጣጠሪያዎች",
     "transfers": "ማስተላለፊያዎች",
     "warehouses": "መጋዘኖች",
@@ -40,7 +41,8 @@
     "name":"የምርት ስም",
     "quantity": "ብዛት",
     "cancel": "ይቅር",
-    "confirm": "አረጋግጥ"
+    "confirm": "አረጋግጥ",
+    "search": "ፍለጋ"
   },
   "products": {
     "imageUploadFailed": "የምስል መጫን አልተሳካም",
@@ -305,6 +307,7 @@
     "search": "ፈልግ..."
   },
   "editProduct": {
+    "removePhoto": "ፎቶ አስወግድ",
     "buyingPrice": "የግዢ ዋጋ (ETB)",
     "sellingPrice": "የመሸጫ ዋጋ (ETB)",
     "buyingPricePlaceholder": "የግዢ ዋጋ አስገባ",
@@ -341,6 +344,7 @@
   },
   "sale": {
     "fillcustomername": "እባክዎ የደንበኛ ስም ያስገቡ",
+    "recordsaleandnew": "የመዝገብ ሽያጭ እና አዲስ",
     "errortitle": "ስህተት",
     "invalidunitprice": "ልክ ያልሆነ ክፍል ዋጋ",
     "errorloadwarehouses": "ግንባታዎችን ማስመጣት አልተቻለም",

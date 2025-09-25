@@ -237,7 +237,12 @@ const EditProductScreen = () => {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.imageButton} onPress={handleImagePick} disabled={imageLoading}>
+          {/* Change Photo */}
+          <TouchableOpacity
+            style={styles.imageButton}
+            onPress={handleImagePick}
+            disabled={imageLoading}
+          >
             {imageLoading ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
@@ -247,7 +252,22 @@ const EditProductScreen = () => {
               </>
             )}
           </TouchableOpacity>
+
+          {/* ✅ Remove Photo */}
+          {imagePreview ? (
+            <TouchableOpacity
+              style={[styles.imageButton, { backgroundColor: '#ef4444', marginTop: 8 }]}
+              onPress={() => {
+                setThumbnail('');
+                setImagePreview('');
+              }}
+            >
+              <Feather name="trash-2" size={18} color="#fff" />
+              <Text style={styles.imageButtonText}>{t('editProduct.removePhoto')}</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
+
 
         {/* Form Section */}
         <View style={styles.formCard}>
