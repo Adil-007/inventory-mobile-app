@@ -22,6 +22,7 @@
     "more": {
     "title": "More",
     "subtitle": "Additional inventory controls",
+    "salesDetailReport": "Sales Detail Report",
     "transfers": "Transfers",
     "warehouses": "Warehouses",
     "categories": "Categories",
@@ -40,7 +41,8 @@
   "name":"Product Name",
   "quantity": "Quantity",
   "cancel": "Cancel",
-  "confirm": "Confirm"
+  "confirm": "Confirm",
+  "search": "Search"
 },
 "products": {
   "imageUploadFailed": "Failed to upload product image",
@@ -302,6 +304,7 @@
     "search": "Search..."
   },
    "editProduct": {
+    "removePhoto": "Remove Photo",
     "buyingPrice": "Buying Price (ETB)",
     "sellingPrice": "Selling Price (ETB)",
     "buyingPricePlaceholder": "Enter buying price",
@@ -339,6 +342,7 @@
   "sale": {
     "fillcustomername": "Please enter the customer name",
     "errortitle": "Error",
+    "recordsaleandnew": "Record Sale and New",
     "invalidquantity": "Invalid Quantity",
     "errorloadwarehouses": "Could not load warehouses",
     "errorloadproducts": "Could not load products",

@@ -1,6 +1,5 @@
 import { Feather } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -176,11 +175,10 @@ export default function SalesPage() {
   );
 
   // Fetch sales on screen focus
-  useFocusEffect(
-    useCallback(() => {
+
+    useEffect(() => {
       fetchSales(1);
-    }, [fetchSales])
-  );
+    }, [fetchSales]);
 
   // Refetch when page changes
   useEffect(() => {

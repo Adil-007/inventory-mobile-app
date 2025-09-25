@@ -54,6 +54,12 @@ useEffect(() => {
         onPress: () => router.push('/reports'),
         adminOnly: true,
       },
+        {
+          title: t('more.salesDetailReport'),
+          icon: 'file-text', // you can use any Feather icon
+          onPress: () => router.push('/SalesReport'),
+          adminOnly: true,   // 👈 only admins see it (optional)
+        },
     ];
 
     let role = userRole?.toLowerCase() || 'user';
